@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+roamingdb.json
+tempNodes.json
+*.log
+.DS_Store
