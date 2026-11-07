@@ -55,6 +55,14 @@ paper's pseudocode:
    `CHIRPSTACK_API_TOKEN`). If that key is still active on any ChirpStack
    instance, revoke/rotate it.
 
+6. **DevAddr extraction fixed.** The earlier scripts computed the DevAddr as
+   `phyPayload_hex[3:10][::-1]` (seven hex digits, nibble-reversed), which
+   cannot produce a valid 8-digit DevAddr; `gwaddons_v7.py` used
+   `[2:10]` without reversing. The consolidated bridge now reads bytes 1-4
+   of the PHYPayload and reverses them byte-wise (LoRaWAN frames carry the
+   DevAddr little-endian). `roaming-bridge/python/tests/` covers this. The
+   historical scripts under `history/` are left untouched for reference.
+
 None of this invalidates the experimental results in the paper — the
 latency/packet-loss numbers were presumably measured against whatever
 version of the code was running at the time, and that exact version may no

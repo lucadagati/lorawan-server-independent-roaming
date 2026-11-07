@@ -20,6 +20,7 @@ GW_LoRa_Roaming repository (gwaddons.py, gwaddons-v5, gwaddons-v7):
 
 import base64
 import json
+import os
 import threading
 
 import paho.mqtt.client as mqtt
@@ -27,11 +28,11 @@ from termcolor import colored
 from tinydb import Query, TinyDB
 
 # Local (visited-network) broker the physical gateway publishes to.
-LOCAL_BROKER = "127.0.0.1"
+LOCAL_BROKER = os.environ.get("ROAMING_LOCAL_BROKER", "127.0.0.1")
 
 # TinyDB roaming table: one row per known DevAddr, e.g.
 #   {"device_address": "26011bda", "ns_ip": "10.0.0.10", "roaming_gw_id": "de2b5906b8e2ca64"}
-ROAMING_DB_PATH = "roamingdb.json"
+ROAMING_DB_PATH = os.environ.get("ROAMING_DB_PATH", "roamingdb.json")
 
 TOPICS = (
     "gateway/+/event/up",
@@ -41,10 +42,15 @@ TOPICS = (
 
 
 def decode_dev_addr(phy_payload_b64: str) -> str:
-    """Extract the big-endian DevAddr (as hex) from a base64 PHYPayload."""
-    phy_payload = base64.b64decode(phy_payload_b64.encode()).hex()
-    dev_addr = phy_payload[3:10]
-    return dev_addr[::-1]
+    """Extract the DevAddr (as 8 lowercase hex chars, big-endian) from a base64 PHYPayload.
+
+    Frame layout: MHDR (1 byte) | DevAddr (4 bytes, little-endian on the air) | FCtrl ...
+    The DevAddr is therefore bytes 1..4 of the frame, reversed byte-wise.
+    (The historical scripts sliced 7 hex digits and reversed nibbles, which does
+    not yield a valid DevAddr; see docs/as-built-vs-paper.md.)
+    """
+    phy_payload = base64.b64decode(phy_payload_b64.encode())
+    return phy_payload[1:5][::-1].hex()
 
 
 def rewrite_key(payload, key, value):
