@@ -1,4 +1,5 @@
-FROM ubuntu:latest
+# Pinned: ChirpStack v3 packages and apt-key handling target Ubuntu 22.04 (ubuntu:latest no longer ships apt-key)
+FROM ubuntu:22.04
 
 # Imposta la variabile d'ambiente per non richiedere interazione durante l'installazione
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,8 +15,9 @@ RUN mkdir /run/mosquitto/ && chmod 777 /run/mosquitto/
 RUN apt-get update && apt-get install -y postgresql mosquitto nano net-tools iputils-ping wget curl software-properties-common build-essential tar ssh git supervisor mosquitto redis-server -y
 
 # Aggiungi la chiave GPG e il repository di ChirpStack
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1CE2AFD36DBCCA00
-RUN echo "deb https://artifacts.chirpstack.io/packages/3.x/deb stable main" | tee /etc/apt/sources.list.d/chirpstack.list
+RUN apt-get install -y gnupg && mkdir -p /root/.gnupg && chmod 700 /root/.gnupg && \
+    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x1CE2AFD36DBCCA00" | gpg --dearmor -o /usr/share/keyrings/chirpstack.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/chirpstack.gpg] https://artifacts.chirpstack.io/packages/3.x/deb stable main" > /etc/apt/sources.list.d/chirpstack.list
 RUN apt-get update
 
 # Installa ChirpStack Network Server, Application Server e Gateway Bridge (per LWN-Simulator)
@@ -45,8 +47,11 @@ ENV PATH="${PATH}:/root/go/bin"
 RUN git clone --depth 1 https://github.com/UniCT-ARSLab/LWN-Simulator.git /LWN-Simulator
 COPY simulator-patch/0001-add-prometheus-uplink-downlink-metrics.patch /tmp/
 WORKDIR /LWN-Simulator
-RUN git apply /tmp/0001-add-prometheus-uplink-downlink-metrics.patch && \
-    go get github.com/prometheus/client_golang/prometheus
+# The patch targets an older upstream revision: if it no longer applies the demo still builds,
+# only without the Prometheus counters (needed solely for the scalability figures).
+RUN (git apply /tmp/0001-add-prometheus-uplink-downlink-metrics.patch && \
+     go get github.com/prometheus/client_golang/prometheus) || \
+    echo "WARNING: Prometheus patch not applied (upstream LWN-Simulator changed); metrics disabled"
 # Porta 9000 e bind su tutte le interfacce (raggiungibile da host)
 RUN sed -i 's/"port":8000,/"port":9000,/' config.json && \
     sed -i 's/"address":"[^"]*"/"address":"0.0.0.0"/' config.json || true

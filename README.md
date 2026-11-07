@@ -151,12 +151,14 @@ The payload encodes DevAddr `26011bda`; the bridge republishes it on `<ns_ip>` u
 - The REST activation API, SLA/ACL handshake and Golang gateway-bridge integration described in the paper are **not** part of this repository.
 - Stats/keep-alive topics are not forwarded (see `gwaddons.py`).
 - Test devices use sequential or well-known keys: never reuse them in production.
-- Not verified in this environment: end-to-end forwarding against two live ChirpStack networks (unit tests and logic checks only).
+- Verified: unit tests of the bridge helpers; the Docker image builds on Ubuntu 22.04 and starts (ChirpStack UI on 8080, LWN-Simulator UI on 9000, demo bootstrap completes).
+- Not verified in this environment: end-to-end forwarding between two live ChirpStack networks.
 
 ## Changes in this revision
 
 - `decode_dev_addr` corrected (bytes 1-4 of the frame, byte-reversed); unit tests added.
 - Bridge paths/brokers configurable via environment variables.
+- Dockerfile fixed: base image pinned to Ubuntu 22.04 (`ubuntu:latest` no longer ships `apt-key`), ChirpStack repository key installed through a signed keyring, and the LWN-Simulator Prometheus patch made optional because it no longer applies to upstream `master` (see `simulator-patch/README.md`).
 
 ## License
 

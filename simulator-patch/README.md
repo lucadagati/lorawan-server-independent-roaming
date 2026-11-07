@@ -24,3 +24,5 @@ It requires `github.com/prometheus/client_golang` as an added dependency
 
 This patch only adds counters; it does not change simulated device
 behavior, so simulation results are unaffected by whether it's applied.
+
+> **Note (2026-11):** the patch was written against an older revision of upstream LWN-Simulator and does **not** apply cleanly to the current `master`. The repository Dockerfile therefore treats it as optional (a warning is printed and the counters are simply absent). To reproduce the scalability figures check out the upstream revision contemporary with the paper (around the end of 2022) before applying the patch.
